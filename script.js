@@ -1,84 +1,112 @@
-var timer_display = document.getElementsByClassName("timer-display")[0]; // timer display
-var timer; // timer object
-var timer_status = 0; // 0 = stopped, 1 = running
-var elapsedMilliseconds = 0;  // elapsed time in milliseconds
+const display = document.getElementsByClassName("timer-display")[0]; // timer display
+let timer = null; // timer object
+var isRunning = false;
+var startTime = 0;
+var elapsedTime = 0;  // elapsed time in milliseconds
 var startButton = document.getElementById("start"); // start button
 var resetButton = document.getElementById("reset"); // reset button
 
 startButton.addEventListener("click", function() {
     // if timer is not running, start it; otherwise, stop it
-    if (!timer_status) {
+    if (!isRunning) {
         startTimer();
-        timer_status = 1;
-        startButton.innerHTML = "توقف";
-        startButton.style = "color: red; text-shadow: 0 0 10px red;";
+        update_button();
     }
     else {
         stopTimer();
-        timer_status = 0;
-        startButton.innerHTML = "شروع";
-        startButton.style = "color: #fff; text-shadow: 0";
+        update_button();
     }
 });
 
 resetButton.addEventListener("click", function() {
     resetTimer();
-    startButton.innerHTML = "شروع";
-    startButton.style = "color: #fff; text-shadow: 0";
+    update_button();
 });
 
 window.addEventListener("load", function() {
-    var storedValue = localStorage.getItem("latestTimerValue");
-    if (storedValue) {
-        var data = JSON.parse(storedValue);
-        elapsedMilliseconds = data.time || 0;
-        displayTime();
+    var startTimeValue = localStorage.getItem("startTime");
+    var elapsedTimeValue = localStorage.getItem("elapsedTime");
+    var isRunningValue = localStorage.getItem("isRunning");
+
+    if (startTimeValue) {
+        var data = JSON.parse(startTimeValue);
+        startTime = data.startTime || 0;
+        if (JSON.parse(isRunningValue).isRunning) {
+            timer = setInterval(update_display, 10);
+            isRunning = true;
+            update_button();
+        }
+        else {
+            var elapsedData = JSON.parse(elapsedTimeValue);
+            elapsedTime = elapsedData.elapsedTime || 0;
+            update_display(loadfromstorage = true);
+        }
     }
 });
 
+// start function
 function startTimer() {
-    if (timer) {
-        return;
+    if (!isRunning) {
+        startTime = Date.now() - elapsedTime;
+        localStorage.setItem("startTime", JSON.stringify({startTime: startTime}));
+        localStorage.setItem("isRunning", JSON.stringify({isRunning: true}));
+        timer = setInterval(update_display, 10);
     }
-
-    timer = setInterval(function() {
-        elapsedMilliseconds += 10;
-        displayTime();
-        if (elapsedMilliseconds % 1000 === 0) {
-            localStorage.setItem("latestTimerValue", JSON.stringify({ time: elapsedMilliseconds }));
-        }
-    }, 10);
+    isRunning = true;
 }
 
+// stop function
 function stopTimer() {
     clearInterval(timer);
     timer = null;
+    localStorage.setItem("elapsedTime", JSON.stringify({elapsedTime: elapsedTime}));
+    localStorage.setItem("isRunning", JSON.stringify({isRunning: false}));
+    isRunning = false;
 }
 
+// reset function
 function resetTimer() {
     clearInterval(timer);
     timer = null;
-    elapsedMilliseconds = 0;
-    timer_status = 0;
-    document.getElementsByClassName("stopwatch")[0].style = "top: 0px";
-    timer_display.innerHTML = "00:00:00";
-    localStorage.removeItem("latestTimerValue");
+    startTime = 0;
+    elapsedTime = 0;
+    isRunning = false;
+    display.innerHTML = "00:00:00";
+    localStorage.removeItem("elapsedTime");
+    localStorage.removeItem("startTime");
+    localStorage.removeItem("isRunning");
 }
 
-function displayTime() {
-    var milliseconds = elapsedMilliseconds % 1000;
-    var totalSeconds = Math.floor(elapsedMilliseconds / 1000);
-    var seconds = totalSeconds % 60;
-    var totalMinutes = Math.floor(totalSeconds / 60);
-    var minutes = totalMinutes % 60;
-    var hours = Math.floor(totalMinutes / 60);
+// update display values
+function update_display(loadfromstorage = false) {
+    const currentTime = Date.now();
 
-    var timeDisplay = 
-        (hours > 0 ? (hours > 9 ? hours : "0" + hours) + ":" : "") +
-        (minutes > 9 ? minutes : "0" + minutes) + ":" +
-        (seconds > 9 ? seconds : "0" + seconds) + ":" +
-        (milliseconds > 90 ? Math.floor(milliseconds/10) : "0" + Math.floor(milliseconds/10));
+    elapsedTime = loadfromstorage ? JSON.parse(localStorage.getItem("elapsedTime")).elapsedTime : currentTime - startTime;
 
-    timer_display.innerHTML = timeDisplay;
+    let hours = Math.floor(elapsedTime / 3600000);
+    let minutes = Math.floor((elapsedTime % 3600000) / 60000);
+    let seconds = Math.floor((elapsedTime % 60000) / 1000);
+    let milliseconds = Math.floor((elapsedTime % 1000) / 10);
+
+    hours = hours.toString().padStart(2, "0");
+    minutes = minutes.toString().padStart(2, "0");
+    seconds = seconds.toString().padStart(2, "0");
+    milliseconds = milliseconds.toString().padStart(2, "0");
+
+    display.innerHTML = hours === "00" ? 
+        `${minutes}:${seconds}:${milliseconds}` :
+        `${hours}:${minutes}:${seconds}:${milliseconds}`; // if hours is 0, do not display it
+}
+
+// update button text and style
+function update_button() {
+    if (isRunning) {
+        startButton.innerHTML = "توقف";
+        startButton.style = "color: red; text-shadow: 0 0 10px red;";
+    }
+    else {
+        startButton.innerHTML = "شروع";
+        startButton.style = "color: #fff; text-shadow: 0";
+    }
 }
 

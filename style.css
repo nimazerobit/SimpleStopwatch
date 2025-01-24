@@ -10,6 +10,14 @@ body {
     background-color: #252935;
 }
 
+input,
+textarea,
+button,
+select,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+
 .app {
     display: flex;
     justify-content: center;
